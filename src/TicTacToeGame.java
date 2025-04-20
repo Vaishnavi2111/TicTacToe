@@ -4,7 +4,6 @@ import java.awt.event.*;
 import java.util.Random;
 
 public class TicTacToeGame {
-
     public static void main(String[] args) {
         SwingUtilities.invokeLater(() -> new WelcomeScreen());
     }
@@ -56,6 +55,7 @@ class TicTacToe extends JFrame {
     private boolean gameOver = false;
     private String difficulty;
     private Random random = new Random();
+    private int[] winningLine = null; // for animation
 
     public TicTacToe(String difficulty) {
         this.difficulty = difficulty;
@@ -64,7 +64,6 @@ class TicTacToe extends JFrame {
         setSize(400, 480);
         setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
         setLocationRelativeTo(null);
-
         setLayout(new BorderLayout());
 
         JPanel gamePanel = new JPanel(new GridLayout(3, 3));
@@ -102,15 +101,14 @@ class TicTacToe extends JFrame {
     }
 
     private void handleClick(int index) {
-        if (!buttons[index].getText().equals("") || gameOver)
-            return;
+        if (!buttons[index].getText().equals("") || gameOver) return;
 
         buttons[index].setText(String.valueOf(currentPlayer));
         buttons[index].setEnabled(false);
 
         if (checkWin(currentPlayer)) {
             gameOver = true;
-            JOptionPane.showMessageDialog(this, currentPlayer + " wins!");
+            animateWin();
             return;
         } else if (isDraw()) {
             gameOver = true;
@@ -148,21 +146,19 @@ class TicTacToe extends JFrame {
     }
 
     private void mediumBot() {
-        // Win if possible
         for (int i = 0; i < 9; i++) {
             if (buttons[i].getText().equals("")) {
                 buttons[i].setText("O");
                 if (checkWin('O')) {
                     buttons[i].setEnabled(false);
                     gameOver = true;
-                    JOptionPane.showMessageDialog(this, "O wins!");
+                    animateWin();
                     return;
                 }
                 buttons[i].setText("");
             }
         }
 
-        // Block X
         for (int i = 0; i < 9; i++) {
             if (buttons[i].getText().equals("")) {
                 buttons[i].setText("X");
@@ -224,7 +220,7 @@ class TicTacToe extends JFrame {
     private void postBotMove() {
         if (checkWin('O')) {
             gameOver = true;
-            JOptionPane.showMessageDialog(this, "O wins!");
+            animateWin();
         } else if (isDraw()) {
             gameOver = true;
             JOptionPane.showMessageDialog(this, "It's a draw!");
@@ -239,20 +235,45 @@ class TicTacToe extends JFrame {
 
     private boolean checkWin(char player) {
         String mark = String.valueOf(player);
-        return (checkLine(0, 1, 2, mark) ||
-                checkLine(3, 4, 5, mark) ||
-                checkLine(6, 7, 8, mark) ||
-                checkLine(0, 3, 6, mark) ||
-                checkLine(1, 4, 7, mark) ||
-                checkLine(2, 5, 8, mark) ||
-                checkLine(0, 4, 8, mark) ||
-                checkLine(2, 4, 6, mark));
+        int[][] lines = {
+                {0, 1, 2}, {3, 4, 5}, {6, 7, 8},
+                {0, 3, 6}, {1, 4, 7}, {2, 5, 8},
+                {0, 4, 8}, {2, 4, 6}
+        };
+
+        for (int[] line : lines) {
+            if (buttons[line[0]].getText().equals(mark) &&
+                buttons[line[1]].getText().equals(mark) &&
+                buttons[line[2]].getText().equals(mark)) {
+                winningLine = line;
+                return true;
+            }
+        }
+        return false;
     }
 
-    private boolean checkLine(int i1, int i2, int i3, String mark) {
-        return buttons[i1].getText().equals(mark) &&
-               buttons[i2].getText().equals(mark) &&
-               buttons[i3].getText().equals(mark);
+    private void animateWin() {
+        if (winningLine == null) return;
+
+        Timer timer = new Timer(300, null);
+        final int[] count = {0};
+
+        timer.addActionListener(e -> {
+            for (int index : winningLine) {
+                JButton b = buttons[index];
+                b.setBackground((count[0] % 2 == 0) ? Color.YELLOW : null);
+            }
+            count[0]++;
+            if (count[0] > 5) {
+                timer.stop();
+                JOptionPane.showMessageDialog(this, currentPlayer + " wins!");
+            }
+        });
+
+        timer.start();
+
+        // Disable all buttons
+        for (JButton b : buttons) b.setEnabled(false);
     }
 
     private boolean isDraw() {
@@ -266,8 +287,10 @@ class TicTacToe extends JFrame {
         for (JButton button : buttons) {
             button.setText("");
             button.setEnabled(true);
+            button.setBackground(null);
         }
         currentPlayer = 'X';
         gameOver = false;
+        winningLine = null;
     }
 }
